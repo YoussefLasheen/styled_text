@@ -119,7 +119,8 @@ class DemoPage extends StatelessWidget {
                 text: 'Test: <bold>bold</bold> and <red>red color</red> text.',
                 tags: {
                   'bold': StyledTextTag(style: const TextStyle(fontWeight: FontWeight.bold)),
-                  'red': StyledTextTag(style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                  'red': StyledTextTag(
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
                 },
               ),
 

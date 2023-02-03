@@ -141,11 +141,11 @@ class _CustomStyledTextState extends State<CustomStyledText> {
       ListQueue<_Node> textQueue = ListQueue();
       Map<String?, String?>? attributes;
 
-      final xmlStreamer = XmlStreamer(
+      final xmlIterator = XmlIterator(
         '<?xml version="1.0" encoding="UTF-8"?><root>' + textValue + '</root>',
         trimSpaces: false,
       );
-      xmlStreamer.read().listen((e) {
+      xmlIterator.read().forEach((e) {
         switch (e.state) {
           case XmlState.Text:
           case XmlState.CDATA:
@@ -191,10 +191,9 @@ class _CustomStyledTextState extends State<CustomStyledText> {
           case XmlState.Top:
             break;
         }
-      }).onDone(() {
-        _rootNode = node;
-        _buildTextSpans(_rootNode);
       });
+      _rootNode = node;
+      _buildTextSpans(_rootNode);
     } else {
       if (_rootNode != null && _textSpans == null) {
         _buildTextSpans(_rootNode);
