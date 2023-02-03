@@ -142,7 +142,7 @@ packages:
       path: "../styled_text"
       relative: true
     source: path
-    version: "6.0.0"
+    version: "7.0.0"
   term_glyph:
     dependency: transitive
     description:
@@ -170,11 +170,12 @@ packages:
   xmlstream:
     dependency: transitive
     description:
-      name: xmlstream
-      sha256: "2d10c69a9d5fc46f71798b80ee6db15bc0d5bf560fdbdd264776cbeee0c83631"
-      url: "https://pub.dev"
-    source: hosted
+      path: "."
+      ref: HEAD
+      resolved-ref: "9f147860f276e9594a11ec59f22b3458e474e34e"
+      url: "https://github.com/Maatteogekko/xmlstream.git"
+    source: git
     version: "1.0.0"
 sdks:
   dart: ">=2.18.0 <3.0.0"
-  flutter: ">=3.3.0"
+  flutter: ">=3.7.0"
