@@ -73,6 +73,11 @@ class CustomStyledText extends StatefulWidget {
   /// The builder with the generated [TextSpan] as input.
   final StyledTextWidgetBuilderCallback builder;
 
+  /// Wether to parse the [text] synchronously or asynchronously.
+  ///
+  /// For small amounts of text the performance penalty is negligible. Take more care for longer texts.
+  final bool parseSync;
+
   /// Create a [CustomStyledText] with your own builder function.
   ///
   /// This way you can manage the resulting [TextSpan] by yourself.
@@ -82,6 +87,7 @@ class CustomStyledText extends StatefulWidget {
     required this.text,
     this.tags = const {},
     this.style,
+    this.parseSync = true,
     required this.builder,
   });
 
@@ -141,11 +147,7 @@ class _CustomStyledTextState extends State<CustomStyledText> {
       ListQueue<_Node> textQueue = ListQueue();
       Map<String?, String?>? attributes;
 
-      final xmlIterator = XmlIterator(
-        '<?xml version="1.0" encoding="UTF-8"?><root>' + textValue + '</root>',
-        trimSpaces: false,
-      );
-      xmlIterator.read().forEach((e) {
+      void onXmlEvent(XmlEvent e) {
         switch (e.state) {
           case XmlState.Text:
           case XmlState.CDATA:
@@ -191,9 +193,26 @@ class _CustomStyledTextState extends State<CustomStyledText> {
           case XmlState.Top:
             break;
         }
-      });
-      _rootNode = node;
-      _buildTextSpans(_rootNode);
+      }
+
+      if (widget.parseSync) {
+        final xmlIterator = XmlIterator(
+          '<?xml version="1.0" encoding="UTF-8"?><root>' + textValue + '</root>',
+          trimSpaces: false,
+        );
+        xmlIterator.read().forEach(onXmlEvent);
+        _rootNode = node;
+        _buildTextSpans(_rootNode);
+      } else {
+        final xmlStreamer = XmlStreamer(
+          '<?xml version="1.0" encoding="UTF-8"?><root>' + textValue + '</root>',
+          trimSpaces: false,
+        );
+        xmlStreamer.read().listen(onXmlEvent).onDone(() {
+          _rootNode = node;
+          _buildTextSpans(_rootNode);
+        });
+      }
     } else {
       if (_rootNode != null && _textSpans == null) {
         _buildTextSpans(_rootNode);
@@ -206,7 +225,7 @@ class _CustomStyledTextState extends State<CustomStyledText> {
       if (mounted) {
         final span = node.createSpan(context: context);
         _textSpans = TextSpan(children: [span]);
-        setState(() {});
+        if (!widget.parseSync) setState(() {});
       } else {
         _textSpans = null;
       }
