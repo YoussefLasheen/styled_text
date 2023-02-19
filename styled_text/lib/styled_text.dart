@@ -122,6 +122,11 @@ class StyledText extends StatefulWidget {
   /// {@macro flutter.dart:ui.textHeightBehavior}
   final ui.TextHeightBehavior? textHeightBehavior;
 
+  /// Wether to parse the [text] synchronously or asynchronously.
+  ///
+  /// For small amounts of text the performance penalty is negligible. Take more care for longer texts.
+  final bool parseSync;
+
   /// Create a text widget with formatting via tags.
   ///
   StyledText({
@@ -140,6 +145,7 @@ class StyledText extends StatefulWidget {
     this.strutStyle,
     this.textWidthBasis,
     this.textHeightBehavior,
+    this.parseSync = true,
   })  : this.tags = tags ?? const {},
         this.selectable = false,
         this._focusNode = null,
@@ -203,6 +209,7 @@ class StyledText extends StatefulWidget {
     GestureTapCallback? onTap,
     ScrollPhysics? scrollPhysics,
     String? semanticsLabel,
+    this.parseSync = true,
   })  : this.tags = tags ?? const {},
         this.selectable = true,
         this.softWrap = true,
@@ -318,11 +325,7 @@ class _StyledTextState extends State<StyledText> {
       ListQueue<_Node> textQueue = ListQueue();
       Map<String?, String?>? attributes;
 
-      final xmlIterator = XmlIterator(
-        '<?xml version="1.0" encoding="UTF-8"?><root>' + textValue + '</root>',
-        trimSpaces: false,
-      );
-      xmlIterator.read().forEach((e) {
+      void onXmlEvent(XmlEvent e) {
         switch (e.state) {
           case XmlState.Text:
           case XmlState.CDATA:
@@ -368,9 +371,26 @@ class _StyledTextState extends State<StyledText> {
           case XmlState.Top:
             break;
         }
-      });
-      _rootNode = node;
-      _buildTextSpans(_rootNode);
+      }
+
+      if (widget.parseSync) {
+        final xmlIterator = XmlIterator(
+          '<?xml version="1.0" encoding="UTF-8"?><root>' + textValue + '</root>',
+          trimSpaces: false,
+        );
+        xmlIterator.read().forEach(onXmlEvent);
+        _rootNode = node;
+        _buildTextSpans(_rootNode);
+      } else {
+        final xmlStreamer = XmlStreamer(
+          '<?xml version="1.0" encoding="UTF-8"?><root>' + textValue + '</root>',
+          trimSpaces: false,
+        );
+        xmlStreamer.read().listen(onXmlEvent).onDone(() {
+          _rootNode = node;
+          _buildTextSpans(_rootNode);
+        });
+      }
     } else {
       if (_rootNode != null && _textSpans == null) {
         _buildTextSpans(_rootNode);
@@ -383,7 +403,7 @@ class _StyledTextState extends State<StyledText> {
       if (mounted) {
         final span = node.createSpan(context: context);
         _textSpans = TextSpan(children: [span]);
-        setState(() {});
+        if (!widget.parseSync) setState(() {});
       } else {
         _textSpans = null;
       }
