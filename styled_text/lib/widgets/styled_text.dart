@@ -113,11 +113,6 @@ class StyledText extends StatelessWidget {
   /// {@macro flutter.dart:ui.textHeightBehavior}
   final ui.TextHeightBehavior? textHeightBehavior;
 
-  /// Wether to parse the [text] synchronously or asynchronously.
-  ///
-  /// For small amounts of text the performance penalty is negligible. Take more care for longer texts.
-  final bool parseSync;
-
   /// Create a text widget with formatting via tags.
   ///
   StyledText({
@@ -136,7 +131,6 @@ class StyledText extends StatelessWidget {
     this.strutStyle,
     this.textWidthBasis,
     this.textHeightBehavior,
-    this.parseSync = true,
   })  : this.tags = tags ?? const {},
         this.selectable = false,
         this._focusNode = null,
@@ -201,7 +195,6 @@ class StyledText extends StatelessWidget {
     GestureTapCallback? onTap,
     ScrollPhysics? scrollPhysics,
     String? semanticsLabel,
-    this.parseSync = true,
   })  : this.tags = tags ?? const {},
         this.selectable = true,
         this.softWrap = true,
@@ -342,7 +335,6 @@ class StyledText extends StatelessWidget {
       newLineAsBreaks: newLineAsBreaks,
       text: text,
       tags: tags,
-      parseSync: parseSync,
       builder: selectable ? _buildSelectableText : _buildText,
     );
   }
