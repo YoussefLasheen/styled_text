@@ -6,7 +6,7 @@ import 'dart:ui' as ui show TextHeightBehavior, BoxHeightStyle, BoxWidthStyle;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:xmlstream/xmlstream.dart';
+import 'package:xml/xml_events.dart';
 import 'package:styled_text/tags/styled_text_tag_base.dart';
 
 export 'tags/styled_text_tag_base.dart';
@@ -53,9 +53,6 @@ class StyledText extends StatefulWidget {
   /// ```
   ///
   final String text;
-
-  /// Treat newlines as line breaks.
-  final bool newLineAsBreaks;
 
   /// Is text selectable?
   final bool selectable;
@@ -122,17 +119,11 @@ class StyledText extends StatefulWidget {
   /// {@macro flutter.dart:ui.textHeightBehavior}
   final ui.TextHeightBehavior? textHeightBehavior;
 
-  /// Wether to parse the [text] synchronously or asynchronously.
-  ///
-  /// For small amounts of text the performance penalty is negligible. Take more care for longer texts.
-  final bool parseSync;
-
   /// Create a text widget with formatting via tags.
   ///
   StyledText({
     Key? key,
     required this.text,
-    this.newLineAsBreaks = true,
     this.style,
     Map<String, StyledTextTagBase>? tags,
     this.textAlign,
@@ -145,7 +136,6 @@ class StyledText extends StatefulWidget {
     this.strutStyle,
     this.textWidthBasis,
     this.textHeightBehavior,
-    this.parseSync = true,
   })  : this.tags = tags ?? const {},
         this.selectable = false,
         this._focusNode = null,
@@ -175,7 +165,6 @@ class StyledText extends StatefulWidget {
   StyledText.selectable({
     Key? key,
     required this.text,
-    this.newLineAsBreaks = false,
     this.style,
     Map<String, StyledTextTagBase>? tags,
     this.textAlign,
@@ -209,7 +198,6 @@ class StyledText extends StatefulWidget {
     GestureTapCallback? onTap,
     ScrollPhysics? scrollPhysics,
     String? semanticsLabel,
-    this.parseSync = true,
   })  : this.tags = tags ?? const {},
         this.selectable = true,
         this.softWrap = true,
@@ -290,8 +278,7 @@ class _StyledTextState extends State<StyledText> {
 
     if ((widget.text != oldWidget.text) ||
         (widget.tags != oldWidget.tags) ||
-        (widget.style != oldWidget.style) ||
-        (widget.newLineAsBreaks != oldWidget.newLineAsBreaks)) {
+        (widget.style != oldWidget.style)) {
       _updateTextSpans(force: true);
     }
   }
@@ -315,82 +302,47 @@ class _StyledTextState extends State<StyledText> {
       String? textValue = _text;
       if (textValue == null) return;
 
-      if (widget.newLineAsBreaks) {
-        textValue = textValue.replaceAll("\n", '<br/>');
-      }
-
       _rootNode?.dispose();
 
       _Node node = _TextNode();
       ListQueue<_Node> textQueue = ListQueue();
-      Map<String?, String?>? attributes;
 
-      void onXmlEvent(XmlEvent e) {
-        switch (e.state) {
-          case XmlState.Text:
-          case XmlState.CDATA:
-            node.children.add(
-              _TextNode(text: e.value),
-            );
-            break;
-
-          case XmlState.Open:
-            textQueue.addLast(node);
-
-            if (e.value == 'br') {
-              node = _TextNode(text: "\n");
-            } else {
-              StyledTextTagBase? tag = _tag(e.value);
-              node = _TagNode(tag: tag);
-              attributes = {};
-            }
-
-            break;
-
-          case XmlState.Closed:
-            node.configure(attributes);
-
-            if (textQueue.isNotEmpty) {
-              final _Node child = node;
-              node = textQueue.removeLast();
-              node.children.add(child);
-            }
-
-            break;
-
-          case XmlState.Attribute:
-            if (e.key != null && attributes != null) {
-              attributes![e.key] = e.value;
-            }
-            break;
-
-          case XmlState.Comment:
-          case XmlState.StartDocument:
-          case XmlState.EndDocument:
-          case XmlState.Namespace:
-          case XmlState.Top:
-            break;
+      void onEndElement() {
+        if (textQueue.isNotEmpty) {
+          final _Node child = node;
+          node = textQueue.removeLast();
+          node.children.add(child);
         }
       }
 
-      if (widget.parseSync) {
-        final xmlIterator = XmlIterator(
-          '<?xml version="1.0" encoding="UTF-8"?><root>' + textValue + '</root>',
-          trimSpaces: false,
-        );
-        xmlIterator.read().forEach(onXmlEvent);
-        _rootNode = node;
-        _buildTextSpans(_rootNode);
-      } else {
-        final xmlStreamer = XmlStreamer(
-          '<?xml version="1.0" encoding="UTF-8"?><root>' + textValue + '</root>',
-          trimSpaces: false,
-        );
-        xmlStreamer.read().listen(onXmlEvent).onDone(() {
-          _rootNode = node;
-          _buildTextSpans(_rootNode);
-        });
+      for (final e in parseEvents(textValue)) {
+        if (e is XmlTextEvent) {
+          node.children.add(_TextNode(text: e.text));
+        } else if (e is XmlCDATAEvent) {
+          node.children.add(_TextNode(text: e.text));
+        } else if (e is XmlStartElementEvent) {
+          textQueue.addLast(node);
+
+          if (e.name == 'br') {
+            node = _TextNode(text: "\n");
+          } else {
+            StyledTextTagBase? tag = _tag(e.name);
+            node = _TagNode(tag: tag);
+            node.configure(
+              {
+                for (final attribute in e.attributes) attribute.name: attribute.value,
+              },
+            );
+          }
+          if (e.isSelfClosing) {
+            onEndElement();
+          }
+        } else if (e is XmlEndElementEvent) {
+          onEndElement();
+        }
       }
+      _rootNode = node;
+      _buildTextSpans(_rootNode);
     } else {
       if (_rootNode != null && _textSpans == null) {
         _buildTextSpans(_rootNode);
@@ -403,7 +355,6 @@ class _StyledTextState extends State<StyledText> {
       if (mounted) {
         final span = node.createSpan(context: context);
         _textSpans = TextSpan(children: [span]);
-        if (!widget.parseSync) setState(() {});
       } else {
         _textSpans = null;
       }
@@ -499,8 +450,13 @@ abstract class _Node {
   String? text;
   final List<_Node> children = [];
 
-  String get textContent =>
-      children.fold(text ?? '', (prevText, tag) => prevText + tag.textContent);
+  String get textContent {
+    final sb = StringBuffer(text ?? '');
+    for (final tag in children) {
+      sb.write(tag.textContent);
+    }
+    return sb.toString();
+  }
 
   InlineSpan createSpan({
     required BuildContext context,

@@ -103,7 +103,6 @@ class DemoPage extends StatelessWidget {
                 // Multiline text without breaks
                 const SizedBox(height: 20),
                 StyledText(
-                  newLineAsBreaks: false,
                   text: """Multiline text 
 (wo breaks)""",
                   tags: {

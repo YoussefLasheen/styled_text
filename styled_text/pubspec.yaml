@@ -14,8 +14,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  xmlstream:
-    git: https://github.com/Maatteogekko/xmlstream.git
+  xml: ^6.2.2
 
 dev_dependencies:
   flutter_test:
