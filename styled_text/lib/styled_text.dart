@@ -181,8 +181,8 @@ class StyledText extends StatefulWidget {
       'Use `contextMenuBuilder` instead. '
       'This feature was deprecated after Flutter v3.3.0-0.5.pre.',
     )
-        // ignore: deprecated_member_use
-        ToolbarOptions? toolbarOptions,
+    // ignore: deprecated_member_use
+    ToolbarOptions? toolbarOptions,
     EditableTextContextMenuBuilder contextMenuBuilder = _defaultContextMenuBuilder,
     TextSelectionControls? selectionControls,
     ui.BoxHeightStyle selectionHeightStyle = ui.BoxHeightStyle.tight,
@@ -369,7 +369,7 @@ class _StyledTextState extends State<StyledText> {
     TextStyle? effectiveTextStyle = widget.style;
     if (widget.style == null || widget.style!.inherit)
       effectiveTextStyle = defaultTextStyle.style.merge(widget.style);
-    if (MediaQuery.boldTextOverride(context))
+    if (MediaQuery.boldTextOf(context))
       effectiveTextStyle = effectiveTextStyle!.merge(const TextStyle(fontWeight: FontWeight.bold));
 
     final span = TextSpan(
@@ -512,6 +512,7 @@ class _TagNode extends _Node {
         ? tag!.createSpan(
             context: context,
             text: text,
+            textContent: textContent,
             children: createChildren(context: context, recognizer: _recognizer),
             attributes: attributes,
             recognizer: _recognizer,
