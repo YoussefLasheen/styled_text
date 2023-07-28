@@ -332,7 +332,6 @@ class StyledText extends StatelessWidget {
   Widget build(BuildContext context) {
     return CustomStyledText(
       style: style,
-      newLineAsBreaks: newLineAsBreaks,
       text: text,
       tags: tags,
       builder: selectable ? _buildSelectableText : _buildText,

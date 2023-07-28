@@ -4,6 +4,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:styled_text/tags/styled_text_tag_base.dart';
 import 'package:styled_text/widgets/styled_text.dart';
+import 'package:xml/xml_events.dart';
 
 /// The builder callback for the [CustomStyledText] widget.
 typedef StyledTextWidgetBuilderCallback = Widget Function(
